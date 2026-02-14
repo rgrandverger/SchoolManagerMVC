@@ -1,46 +1,35 @@
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
-using Microsoft.EntityFrameworkCore;
-using SchoolManagerMVC.Data;
 using SchoolManagerMVC.Models;
+using SchoolManagerMVC.Services;
 
 namespace SchoolManagerMVC.Controllers
 {
     public class UceniciController : Controller
     {
-        private readonly AppDbContext _context;
+        private readonly IUcenikService _ucenikService;
+        private readonly IRazredService _razredService;
 
-        public UceniciController(AppDbContext context)
+        public UceniciController(IUcenikService ucenikService, IRazredService razredService)
         {
-            _context = context;
+            _ucenikService = ucenikService;
+            _razredService = razredService;
         }
 
         // GET: Ucenici
-        public async Task<IActionResult> Index()
+        public IActionResult Index()
         {
-            var appDbContext = _context.Ucenici.Include(u => u.Razred);
-            return View(await appDbContext.ToListAsync());
+            var ucenici = _ucenikService.GetAll();
+            return View(ucenici);
         }
 
         // GET: Ucenici/Details/5
-        public async Task<IActionResult> Details(int? id)
+        public IActionResult Details(int? id)
         {
-            if (id == null)
-            {
-                return NotFound();
-            }
+            if (id == null) return NotFound();
 
-            var ucenik = await _context.Ucenici
-                .Include(u => u.Razred)
-                .FirstOrDefaultAsync(m => m.Id == id);
-            if (ucenik == null)
-            {
-                return NotFound();
-            }
+            var ucenik = _ucenikService.GetById(id.Value);
+            if (ucenik == null) return NotFound();
 
             return View(ucenik);
         }
@@ -48,95 +37,59 @@ namespace SchoolManagerMVC.Controllers
         // GET: Ucenici/Create
         public IActionResult Create()
         {
-            ViewData["RazredId"] = new SelectList(_context.Razredi, "Id", "Id");
+            ViewData["RazredId"] = new SelectList(_razredService.GetAll(), "Id", "Naziv");
             return View();
         }
 
         // POST: Ucenici/Create
-        // To protect from overposting attacks, enable the specific properties you want to bind to.
-        // For more details, see http://go.microsoft.com/fwlink/?LinkId=317598.
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Create([Bind("Id,Ime,Prezime,DatumRodenja,Email,Prosjek,RazredId")] Ucenik ucenik)
+        public IActionResult Create([Bind("Id,Ime,Prezime,DatumRodenja,Email,Prosjek,RazredId")] Ucenik ucenik)
         {
             if (ModelState.IsValid)
             {
-                _context.Add(ucenik);
-                await _context.SaveChangesAsync();
+                _ucenikService.Add(ucenik);
                 return RedirectToAction(nameof(Index));
             }
-            ViewData["RazredId"] = new SelectList(_context.Razredi, "Id", "Id", ucenik.RazredId);
+            ViewData["RazredId"] = new SelectList(_razredService.GetAll(), "Id", "Naziv", ucenik.RazredId);
             return View(ucenik);
         }
 
         // GET: Ucenici/Edit/5
-        public async Task<IActionResult> Edit(int? id)
+        public IActionResult Edit(int? id)
         {
-            if (id == null)
-            {
-                return NotFound();
-            }
+            if (id == null) return NotFound();
 
-            var ucenik = await _context.Ucenici.FindAsync(id);
-            if (ucenik == null)
-            {
-                return NotFound();
-            }
-            ViewData["RazredId"] = new SelectList(_context.Razredi, "Id", "Id", ucenik.RazredId);
+            var ucenik = _ucenikService.GetById(id.Value);
+            if (ucenik == null) return NotFound();
+
+            ViewData["RazredId"] = new SelectList(_razredService.GetAll(), "Id", "Naziv", ucenik.RazredId);
             return View(ucenik);
         }
 
         // POST: Ucenici/Edit/5
-        // To protect from overposting attacks, enable the specific properties you want to bind to.
-        // For more details, see http://go.microsoft.com/fwlink/?LinkId=317598.
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Edit(int id, [Bind("Id,Ime,Prezime,DatumRodenja,Email,Prosjek,RazredId")] Ucenik ucenik)
+        public IActionResult Edit(int id, [Bind("Id,Ime,Prezime,DatumRodenja,Email,Prosjek,RazredId")] Ucenik ucenik)
         {
-            if (id != ucenik.Id)
-            {
-                return NotFound();
-            }
+            if (id != ucenik.Id) return NotFound();
 
             if (ModelState.IsValid)
             {
-                try
-                {
-                    _context.Update(ucenik);
-                    await _context.SaveChangesAsync();
-                }
-                catch (DbUpdateConcurrencyException)
-                {
-                    if (!UcenikExists(ucenik.Id))
-                    {
-                        return NotFound();
-                    }
-                    else
-                    {
-                        throw;
-                    }
-                }
+                _ucenikService.Update(ucenik);
                 return RedirectToAction(nameof(Index));
             }
-            ViewData["RazredId"] = new SelectList(_context.Razredi, "Id", "Id", ucenik.RazredId);
+            ViewData["RazredId"] = new SelectList(_razredService.GetAll(), "Id", "Naziv", ucenik.RazredId);
             return View(ucenik);
         }
 
         // GET: Ucenici/Delete/5
-        public async Task<IActionResult> Delete(int? id)
+        public IActionResult Delete(int? id)
         {
-            if (id == null)
-            {
-                return NotFound();
-            }
+            if (id == null) return NotFound();
 
-            var ucenik = await _context.Ucenici
-                .Include(u => u.Razred)
-                .FirstOrDefaultAsync(m => m.Id == id);
-            if (ucenik == null)
-            {
-                return NotFound();
-            }
+            var ucenik = _ucenikService.GetById(id.Value);
+            if (ucenik == null) return NotFound();
 
             return View(ucenik);
         }
@@ -144,21 +97,10 @@ namespace SchoolManagerMVC.Controllers
         // POST: Ucenici/Delete/5
         [HttpPost, ActionName("Delete")]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> DeleteConfirmed(int id)
+        public IActionResult DeleteConfirmed(int id)
         {
-            var ucenik = await _context.Ucenici.FindAsync(id);
-            if (ucenik != null)
-            {
-                _context.Ucenici.Remove(ucenik);
-            }
-
-            await _context.SaveChangesAsync();
+            _ucenikService.Delete(id);
             return RedirectToAction(nameof(Index));
-        }
-
-        private bool UcenikExists(int id)
-        {
-            return _context.Ucenici.Any(e => e.Id == id);
         }
     }
 }

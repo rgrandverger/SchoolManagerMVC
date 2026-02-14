@@ -15,6 +15,7 @@ namespace SchoolManagerMVC.Models
         public string Email { get; set; } = string.Empty;
 
         [Column(TypeName = "decimal(5,2)")]
+        [DisplayFormat(DataFormatString = "{0:N2}", ApplyFormatInEditMode = true)]
         public decimal Prosjek { get; set; }
 
         public int RazredId { get; set; }
